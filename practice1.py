@@ -1,6 +1,8 @@
+import numpy as np
 
+lst = [10, 20, 5, 40]
 
-a=None
+# 내림차순으로 정렬된 요소의 인덱스를 구함
+indices_desc = sorted(range(len(lst)), key=lambda x: lst[x], reverse=True)
 
-if a:
-    print(a)
+print(indices_desc)
