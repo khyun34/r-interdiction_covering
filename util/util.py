@@ -53,7 +53,7 @@ def Adj_matrix_demand_generate(n,p,criterion,mu,sigma_squared,show_plt):
                 num_neighbor+=1
         if num_neighbor==0:
             non_cover_customer+=1
-    return adj_mat, demand, Neighbor, max_C
+    return adj_mat, demand, Neighbor, max_C, non_cover_customer/n*1.25
 
 
 def plot_points_and_edges(points,p, adjacency_matrix,demand,show_plt):

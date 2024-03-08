@@ -138,7 +138,7 @@ sigma_squared=1.4759065198095778
 start_time=time.perf_counter()
 
 
-adj_mat, demand, Neighbor, max_C=Adj_matrix_demand_generate(n,p,criterion,mu,sigma_squared)
+adj_mat, demand, Neighbor, max_C, non_cover_customer_ratio=Adj_matrix_demand_generate(n,p,criterion,mu,sigma_squared)
         
 master=cplex.Cplex()
 master.parameters.timelimit.set(600)
