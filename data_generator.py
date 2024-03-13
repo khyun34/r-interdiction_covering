@@ -13,7 +13,7 @@ ratioset=[1,1.5,2]
 criterionset=[0.2,0.17, 0.135] 
 #수치 정의
 timerecord=[]
-ndata=4000
+ndata=10
 
 for dataindex in range(3):
     
