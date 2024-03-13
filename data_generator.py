@@ -14,6 +14,7 @@ criterionset=[0.2,0.17, 0.135]
 #수치 정의
 timerecord=[]
 ndata=10
+test_index='Test'
 
 for dataindex in range(3):
     
