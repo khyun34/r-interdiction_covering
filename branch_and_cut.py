@@ -115,118 +115,139 @@ def plot_points_and_edges(points,p, adjacency_matrix,demand):
     plt.grid(True)
     plt.show()
 
-
-
-#수치 정의
-ratio=6
+nset=[150,200,300]
+ndata=10
 global n,p,q,r
 global Neighbor,demand
-n=int(100*ratio)
-p=int(20*ratio)
-# q=1
-# r=0
-q=int(2.5*ratio)
-r=int(2.5*ratio)
-criterion=0.081
-# criterion=0.05
 
-#lognormal 분포 파라미터
+for n in nset:
+    adj_data=np.load("data/Test_adj{}_10.npz".format(n))['arr_0']
+    demand_Data=np.load("data/Test_demand{}_10.npz".format(n))['arr_0']
+    result=open("result/BCresult{}.txt".format(n),"w")
+    for data_index in range(ndata):
+        start_time=time.perf_counter()
+        #수치 정의
+        parameter={"p":int(0.2*n), "q":int(0.05*n), "r":int(0.05*n) }  
+        p=parameter['p']
+        q=parameter['q']
+        r=parameter['r']
+        demand=demand_Data[data_index]
+        adj_mat=adj_data[data_index]
+        # criterion=0.05
 
-mu=2.845565678551321
-sigma_squared=1.4759065198095778
+        #lognormal 분포 파라미터
 
-start_time=time.perf_counter()
+        mu=2.845565678551321
+        sigma_squared=1.4759065198095778
 
-
-adj_mat, demand, Neighbor, max_C, non_cover_customer_ratio=Adj_matrix_demand_generate(n,p,criterion,mu,sigma_squared)
+        start_time=time.perf_counter()
         
-master=cplex.Cplex()
-master.parameters.timelimit.set(600)
-master.objective.set_sense(master.objective.sense.maximize)
+        max_C=np.sum(demand)
 
 
-#x_i: i facility를 보호하면1 아니면 0
-#y_j  :N(j)에 속한 facility가 있으면 1 아니면 0
-x,y,z=[],[],[]
-for j in range(n-p):
-    varname= "y"+str(j)
-    y.append(varname)
-for i in range(n-p,n):
-    varname= "x"+str(i-(n-p))
-    x.append(varname)
-z.append("z")
+        Neighbor = [[] for _ in range(n-p)]
+        for j in range(n-p):
+           for i in range(p):
+                if adj_mat[j][n-p+i] ==1:
+                    Neighbor[j].append(i)
+        sum_w=0
+        for j in range(n-p):
+            if len(Neighbor[j]) !=0:
+                sum_w+=demand[j]
+            
+          
+        # adj_mat, demand, Neighbor, max_C, non_cover_customer_ratio=Adj_matrix_demand_generate(n,p,criterion,mu,sigma_squared)
+                
+        master=cplex.Cplex()
+        master.parameters.timelimit.set(600)
+        master.objective.set_sense(master.objective.sense.maximize)
 
-for j in range(n-p):
-    master.variables.add(names=[y[j]],lb=[0],ub=[1],types=['B'])
-for i in range(n-p,n):
-    master.variables.add(names=[x[i-(n-p)]],lb=[0],ub=[1],types=['B'])
-master.variables.add(names=[z[0]],obj=[1],types=['C'])
-    
 
-# 제약식 (11)
-var,coef=[],[]
-for i in range(p):
-    var.append(x[i])
-    coef.extend([1])
-master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                    senses = "E", rhs=[q])
-    
-# 제약식 (12)
+        #x_i: i facility를 보호하면1 아니면 0
+        #y_j  :N(j)에 속한 facility가 있으면 1 아니면 0
+        x,y,z=[],[],[]
+        for j in range(n-p):
+            varname= "y"+str(j)
+            y.append(varname)
+        for i in range(n-p,n):
+            varname= "x"+str(i-(n-p))
+            x.append(varname)
+        z.append("z")
 
-for j in range(n-p):
-    if len(Neighbor[j]) !=0:
+        for j in range(n-p):
+            master.variables.add(names=[y[j]],lb=[0],ub=[1],types=['B'])
+        for i in range(n-p,n):
+            master.variables.add(names=[x[i-(n-p)]],lb=[0],ub=[1],types=['B'])
+        master.variables.add(names=[z[0]],obj=[1],types=['C'])
+            
+
+        # 제약식 (11)
         var,coef=[],[]
-        var.append(y[j])
-        coef.extend([1])
-        for _, facility_index in enumerate(Neighbor[j]):
-            var.append(x[facility_index])
-            coef.extend([-1])
-        master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                        senses = "L", rhs=[0])
-    else:
-        var=["y"+str(j)]
-        coef=[1]
-        master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                        senses = "E", rhs=[0])
-    
-        
-# 제약식 (13)
-
-for j in range(n-p):
-    if len(Neighbor[j]) !=0:
-        for _, facility_index in enumerate(Neighbor[j]):
-            var,coef=[],[]
-            var.extend([x[facility_index],y[j]])
+        for i in range(p):
+            var.append(x[i])
             coef.extend([1])
-            coef.extend([-1])
-            master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                        senses = "L", rhs=[0])
-#제약식 z
-var, coef = [],[]
-var.append("z")
-coef.append(1)
-master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                    senses = "L", rhs=[max_C])
+        master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                            senses = "E", rhs=[q])
+            
+        # 제약식 (12)
+
+        for j in range(n-p):
+            if len(Neighbor[j]) !=0:
+                var,coef=[],[]
+                var.append(y[j])
+                coef.extend([1])
+                for _, facility_index in enumerate(Neighbor[j]):
+                    var.append(x[facility_index])
+                    coef.extend([-1])
+                master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                                senses = "L", rhs=[0])
+            else:
+                var=["y"+str(j)]
+                coef=[1]
+                master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                                senses = "E", rhs=[0])
+            
+                
+        # 제약식 (13)
+
+        for j in range(n-p):
+            if len(Neighbor[j]) !=0:
+                for _, facility_index in enumerate(Neighbor[j]):
+                    var,coef=[],[]
+                    var.extend([x[facility_index],y[j]])
+                    coef.extend([1])
+                    coef.extend([-1])
+                    master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                                senses = "L", rhs=[0])
+        #제약식 z
+        var, coef = [],[]
+        var.append("z")
+        coef.append(1)
+        master.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                            senses = "L", rhs=[max_C])
 
 
-master.register_callback(Subproblem)
+        master.register_callback(Subproblem)
 
 
-master.solve()
-
-#결과출력
-
-print("demand의 합은= {}".format(np.sum(demand)))
-print("Solution status =", master.solution.get_status(), ":", end=' ')
-print(master.solution.status[master.solution.get_status()])
-print("Solution value  =", round(master.solution.get_objective_value()))
-print("x_Values          = ", master.solution.get_values(x))
-print("y_Values          = ", master.solution.get_values(y))
-print("z_Values          = ", master.solution.get_values(z))
-print("running time= {}".format(time.perf_counter()-start_time))
-# print("아무 곳에도 연결되지 않은 커스토머의 비율은={}".format(non_cover_customer/n*1.25))
-
-
-
-
+        master.solve()
         
+        end_time=time.perf_counter()
+        result.write("{}        {}      {}    {}     {}\n".format(data_index, master.solution.get_objective_value(), sum_w, max_C,end_time-start_time))
+        
+        #결과출력
+
+        print("demand의 합은= {}".format(np.sum(demand)))
+        print("Solution status =", master.solution.get_status(), ":", end=' ')
+        print(master.solution.status[master.solution.get_status()])
+        print("Solution value  =", round(master.solution.get_objective_value()))
+        print("x_Values          = ", master.solution.get_values(x))
+        print("y_Values          = ", master.solution.get_values(y))
+        print("z_Values          = ", master.solution.get_values(z))
+        print("running time= {}".format(time.perf_counter()-start_time))
+        # print("아무 곳에도 연결되지 않은 커스토머의 비율은={}".format(non_cover_customer/n*1.25))
+    result.close()
+
+
+
+                

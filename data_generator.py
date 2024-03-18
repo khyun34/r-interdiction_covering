@@ -9,8 +9,10 @@ global n,p,q,r
 global Neighbor,demand
 show_plt=False
 
-ratioset=[1,1.5,2]
-criterionset=[0.2,0.17, 0.135] 
+# ratioset=[1,1.5,2]
+# criterionset=[0.2,0.17, 0.135] 
+ratioset=[3,4,5]
+criterionset=[0.1,0.09, 0.08] 
 #수치 정의
 timerecord=[]
 ndata=10
@@ -24,15 +26,6 @@ for dataindex in range(3):
     p=int(20*ratio)
     
     r=10*ratio -random.randint(0,3)
-
-    # r=int(2.5*ratio)
-
-    # # criterion=0.081
-    # criterion=0.135
-
-
-
-
 
     #lognormal 분포 파라미터
     mu=2.845565678551321
@@ -67,77 +60,73 @@ for dataindex in range(3):
         lp_obj=np.zeros(p+1)
         lp_obj=np.zeros(p+1)
         
+        if test_index!='Test':
         
-        
-        for k in range(p+1):
-            lp=cplex.Cplex()
-            lp.objective.set_sense(lp.objective.sense.minimize)
-            
-            s,u =[],[]
-            
-            s=["s{}".format(i) for i in range(p)]
-            u=["u{}".format(j) for j in range(n-p)]
-            
-            for i in range(p):
-                lp.variables.add(names=[s[i]],lb=[0],ub=[1],types=["C"])
-            for j in range(n-p):
-                lp.variables.add(names=[u[j]],lb=[0],ub=[1],types=["C"], obj=[demand[j]])
+            for k in range(p+1):
+                lp=cplex.Cplex()
+                lp.objective.set_sense(lp.objective.sense.minimize)
                 
-            x_bar=np.zeros(p)
-            
-            if k!=p:
-                x_bar[k]=1
+                s,u =[],[]
                 
-            #제약식(6)
-            var=["s{}".format(i) for i in range(p)]
-            coef=[1]*p
-            lp.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                            senses = "E", rhs=[r]) 
-            
-            #제약식(7)
-            for j in range(n-p):
-                if len(Neighbor[j]) !=0:
-                    for _ ,facility_index  in enumerate(Neighbor[j]):
-                        var=[u[j],s[facility_index]]
-                        coef=[1,1]
+                s=["s{}".format(i) for i in range(p)]
+                u=["u{}".format(j) for j in range(n-p)]
+                
+                for i in range(p):
+                    lp.variables.add(names=[s[i]],lb=[0],ub=[1],types=["C"])
+                for j in range(n-p):
+                    lp.variables.add(names=[u[j]],lb=[0],ub=[1],types=["C"], obj=[demand[j]])
+                    
+                x_bar=np.zeros(p)
+                
+                if k!=p:
+                    x_bar[k]=1
+                    
+                #제약식(6)
+                var=["s{}".format(i) for i in range(p)]
+                coef=[1]*p
+                lp.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                                senses = "E", rhs=[r]) 
+                
+                #제약식(7)
+                for j in range(n-p):
+                    if len(Neighbor[j]) !=0:
+                        for _ ,facility_index  in enumerate(Neighbor[j]):
+                            var=[u[j],s[facility_index]]
+                            coef=[1,1]
+                            lp.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
+                                            senses = "G", rhs=[1])
+                    else:
+                        var=["u{}".format(j)]
+                        coef=[1]
                         lp.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                                        senses = "G", rhs=[1])
-                else:
-                    var=["u{}".format(j)]
+                                            senses = "E", rhs=[0])
+                #제약식(8)
+                for i in range(p):
+                    var=["s{}".format(i)]
                     coef=[1]
                     lp.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                                        senses = "E", rhs=[0])
-            #제약식(8)
+                                            senses = "L", rhs=[1-x_bar[i]])
+                
+                lp.solve()
+                
+                
+                lp_obj[k]=lp.solution.get_objective_value()
+                
+            max_lp=np.max(lp_obj)
+            nor_lp=np.zeros(p)
+
             for i in range(p):
-                var=["s{}".format(i)]
-                coef=[1]
-                lp.linear_constraints.add(lin_expr=[cplex.SparsePair(var,coef)], \
-                                        senses = "L", rhs=[1-x_bar[i]])
-            
-            lp.solve()
-            
-            
-            lp_obj[k]=lp.solution.get_objective_value()
-            
-        max_lp=np.max(lp_obj)
-        nor_lp=np.zeros(p)
+                lp_result=(lp_obj[i]-lp_obj[p])/(max_lp-lp_obj[p])
+                nor_lp[i]="{:.6f}".format(lp_result)
+            label_set.append(nor_lp)
+        
 
-        for i in range(p):
-            lp_result=(lp_obj[i]-lp_obj[p])/(max_lp-lp_obj[p])
-            nor_lp[i]="{:.6f}".format(lp_result)
-        label_set.append(nor_lp)
     
-
-
-
-
-    # csr_adj = [csr_matrix(dataset) for dataset in adj_mat_set]
-    # csr_demand = [csr_matrix(dataset) for dataset in demand_set]
-    # csr_label = [csr_matrix(dataset) for dataset in label_set]
+    if test_index!='Test':
+        np.savez_compressed('data/label{}_{}.npz'.format(n, ndata), label_set)
+    np.savez_compressed('data/{}_adj{}_{}.npz'.format(test_index,n, ndata), adj_mat_set)
+    np.savez_compressed('data/{}_demand{}_{}.npz'.format(test_index, n, ndata), demand_set)
     
-    np.savez_compressed('data/adj{}_{}.npz'.format(n, ndata), adj_mat_set)
-    np.savez_compressed('data/demand{}_{}.npz'.format(n, ndata), demand_set)
-    np.savez_compressed('data/label{}_{}.npz'.format(n, ndata), label_set)
                     
     print("avg_neighbor={}".format(avg_neighbor))
     timerecord.append(time.perf_counter()-start_time)
