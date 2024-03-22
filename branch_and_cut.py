@@ -115,7 +115,7 @@ def plot_points_and_edges(points,p, adjacency_matrix,demand):
     plt.grid(True)
     plt.show()
 
-nset=[150,200,300]
+nset=[400,500]
 ndata=10
 global n,p,q,r
 global Neighbor,demand

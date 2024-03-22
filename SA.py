@@ -80,14 +80,14 @@ def Followers_problem(Z_current,adj, demand, parameter):
     
     return f_new
     
-nset=[150,200,300]
+nset=[500]
 ndata=10
 
 
 for n in nset:
-    adj=np.load("data/Test_adj{}_10.npz".format(n))['arr_0']
-    demand=np.load("data/Test_demand{}_10.npz".format(n))['arr_0']
-    result=open("result/SAresult{}.txt".format(n),"w")
+    adj=np.load("result/500sizebackup/Test_adj{}_10.npz".format(n))['arr_0']
+    demand=np.load("result/500sizebackup/Test_demand{}_10.npz".format(n))['arr_0']
+    result=open("result/500sizebackup/SAresult{}.txt".format(n),"w")
     for data_index in range(ndata):
         start_time=time.perf_counter()
         T0=100
@@ -97,7 +97,7 @@ for n in nset:
         parameter={"p":int(0.2*n), "q":int(0.05*n), "r":int(0.05*n) }  
         p=parameter['p']
        
-        adj_slice=adj[:, :n-p, n-p:]
+        # adj_slice=adj[:, :n-p, n-p:]
         
         
         (_,n_customer )=demand.shape
@@ -108,7 +108,7 @@ for n in nset:
         random_indices = np.random.choice(n_facility, parameter['r'], replace=False)
         # 선택된 위치의 값을 1로 변경
         Z_init[random_indices] = 1
-        f_best=Followers_problem(Z_init, adj_slice[data_index],demand[data_index],parameter)
+        f_best=Followers_problem(Z_init, adj[data_index],demand[data_index],parameter)
         T=T0
         Z_best=Z_init
         
@@ -116,7 +116,7 @@ for n in nset:
         f_current=f_best
         while T> Tf:
             Z_prime=Swap(Z_current)
-            f_prime=Followers_problem(Z_current, adj_slice[data_index],demand[data_index],parameter)
+            f_prime=Followers_problem(Z_current, adj[data_index],demand[data_index],parameter)
             E=f_current-f_prime
             if E<0:
                 Z_current=Z_prime
